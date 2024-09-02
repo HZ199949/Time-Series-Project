@@ -1,0 +1,372 @@
+---
+title:    "MTH783P Final Project"
+author:   "Zia, 230880401, ah23528@qmul.ac.uk"
+abstract: "In this project, we forecasted the weekly prices of conventional avocado's of Westren United States through  Auto ARIMA and Autoregressive Integretated Moving Average (ARIMA) models. The data has several missing values which are delt with linear interpolation. The stationarity of data is tested through Augmented Dickey–Fuller and KPSS tests which shows that the data is non stationary. The visulaization shows that the prices are not normal and the data set has some outliers. The data is split into training and testing data in which the testing data part includes first the ten weeks of 2018. Several ARIMA models are built and their order is identified by the ACF and PACF plots. The ARIMA model that provided the lowest AIC value was therefore used to forecast the avocado prices. The performance of these  models was tested using accuracy metrics such as ME, MAE, RMSE, MSE, and MAPE. The results indicate that the ARIMA(0,1,1)(0,0,1) model performs better than the Auto ARIMA(1,1,0)(1,0,0) model."
+date:     "Last compiled on:   `r format(Sys.time(), '%d %B, %Y')`"
+output:   pdf_document
+fontsize: 12pt
+header-includes:
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{lmodern}
+  \usepackage{lipsum}
+  \usepackage{fancyhdr}
+  \pagestyle{fancy}
+  \renewcommand{\headrulewidth}{0pt}
+  \fancyhf{}
+  \fancyfoot[C]{\twopagenumbers}
+  \fancypagestyle{plain}{
+    \renewcommand{\headrulewidth}{0pt}
+    \fancyhf{}
+    \fancyfoot[C]{\twopagenumbers}
+  }
+  \usepackage[user]{zref}
+  \newcounter{pageaux}
+  \def\currentauxref{PAGEAUX1}
+  \newcommand{\twopagenumbers}{
+    \stepcounter{pageaux}
+    \thepageaux\, of\, \ref{\currentauxref}
+  }
+  \makeatletter
+  \newcommand{\resetpageaux}{
+    \clearpage
+    \edef\@currentlabel{\thepageaux}\label{\currentauxref}
+    \xdef\currentauxref{PAGEAUX\thepage}
+    \setcounter{pageaux}{0}}
+  \AtEndDvi{\edef\@currentlabel{\thepageaux}\label{\currentauxref}}
+  \makeatletter
+---
+
+```{=html}
+<!--
+#########################################################
+###         DO NOT CHANGE the following code          ###
+#########################################################
+-->
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{=tex}
+\thispagestyle{empty}
+\newpage
+\setcounter{page}{1}
+```
+```{=html}
+<!--
+#########################################################
+###      Start writing your report from line 61       ###
+#########################################################
+-->
+```
+# Introduction
+
+This analysis examines price patterns in the Western US avocado market, focusing on conventional avocados from January 2015 to March 2018. The West was selected due to its high production volume and price volatility, and traditional avocados were chosen for their relatively lower average prices. This study aims to inform strategic decisions regarding production efficiency, product quality, and industry sustainability. The dataset was split into a training set from the start of 2015, to December 31, 2017, and a testing set from January 1, 2018, to March 11, 2018, to facilitate the development of predictive models.
+
+
+# Exploratory Data Analysis
+
+## EDA on the Entire Data Set
+
+The First plot of Mean Average Prices by Region $(Plot:1)$ shows that organic items consistently have higher average prices than conventional ones, likely due to higher production costs or consumer preferences. The Second plot of Price Volatility $(Plot:2)$ reveals that regions like Syracuse and Albany have lower price volatility, indicating stable pricing, while San Francisco exhibits the highest volatility. The plot of Average Production Volume by Region $(Plot: 3)$ illustrates significant variations in production volumes, with the West and Total US leading by a large margin. The final Box-plot of Average Price by Type in West $(Plot: 4)$ shows some outliers on the upper bounds of the plot.
+
+## EDA on Training Data
+
+The time series plot $Plot:5$ of average prices from 2015 to 2017 reveals a pattern showing a modest overall upward trend interspersed with periodic fluctuations that suggest seasonality. A marked increase in price volatility is visible in 2017, with a significant peak and a subsequent drop, indicating there might be stationarity in the training set.There appear to be many missing data points in the plot which we cater for later on.$Plot: 6$ is the Histogram of Average Prices in West,the histogram depicts the frequency distribution of average prices, ranging from just over \$0.60 to \$1.62. The distribution appears right-skewed, with the most common prices concentrated around \$1.00. Fewer occurrences are noted at the higher price points, indicating outliers or less frequent high prices.$Plot: 7$ the QQ plot shows data points aligning with the trend line in the middle, suggesting a normal distribution there. However, deviations in the tails with a steeper lower end and a flatter higher end indicate heavier tails and more extreme values, suggesting a right-skewed distribution. This aligns with the Histogram's findings.
+
+## Summary Statistics
+The summary statistics for the "Average Price" of avocados in the training dataset reveal the following: the lowest price is \$0.66 and the highest is \$1.62. The first quartile $25th$ percentile is \$0.86, the median $50th$ percentile is \$0.95, and the third quartile $75th$ percentile is \$1.03. The mean price is $0.978. There are 15 missing values that need addressing before further modeling.
+
+## Dealing with the Missing Values
+Our training data set had 15 missing values whereas the testing data set had only one hence to deal with this issue we linearly interpolated both the test and training sets through the na.approx() function. We successfully interpolated all the missing values.
+
+## EDA on Training Data Set (Continued)
+We continued our EDA after dealing with the missing values and went on to plot ACF, PACF and the Seasonal Decomposition to check for seasonality. We also ran an ADF test to check for stationarity and got a p-value of $0.3218$ proving that our training data-set is non-stationary.
+$Plot: 8,9$ are the ACF and PACF plots. As the lags increase, the ACF plot reveals a steady decay in correlation, typical of a non-stationary series. It supports earlier test results that the data is non-stationary. The seasonal decomposition plot and consistent seasonal spikes indicate a substantial seasonal component. The PACF plot has a severe cut-off after the first lag and several notable spikes at later delays. After accounting for the other lags, the first lag exhibits a substantial association with the present value, suggesting an AR(1) component. Significant spikes at regular intervals may indicate a seasonal AR effect, implying that historical seasonal values predict current values.
+$Plot: 10$ is the Seasonal Decomposition Plot: 
+It shows a stable trend initially, with a noticeable rise starting in late 2015 through mid-2017, indicating a growth period. The consistent seasonal pattern repeats annually without changes in amplitude, suggesting a steady seasonal influence. The stability of the random component indicates that fluctuations are mainly due to predictable trends, seasonal factors, and some outliers.
+
+# Model
+
+To start we base our model on the findings from the EDA we did on the training set.The key points that we got by conducting the EDA was that the training data set is non-stationary and there is seasonality in the data. We went for multiple ARIMA Models with different $p,d,q$ values, Furthermore to satisfy the models conditions we dealt with seasonality using the seasadj() function and for stationarity we introduced a first difference within the model by introducing $d=1$. 
+The ARIMA models of different orders is built on training data which is made stationary through the first lag difference, after that it is forecasting the first 10 weeks. The order of ARIMA is identified through the PACF plot while the order of moving average is identified through ACF plot. The AIC of each of the 6 models is calculated and we choose the model ARIMA(0,1,1)(0,0,1) which provided the lowest AIC value of $-427.30$ therefore this model is used to forecast the test set. We also ran an Auto ARIMA Model which gave us ARIMA(1,1,0)(1,0,0) as the best model. After selecting the models we carry out a residual analysis of both these models. 
+
+## Residual Diagnostic
+The diagnostic checks on the residuals of ARIMA(0,1,1)(0,0,1) model indicate that the assumptions for a well-fitting model are met.The absence of autocorrelation as evidenced by the Ljung-Box test $p-value= 0.9398$, the normal distribution of residuals and the PACF plot remaining within the range all suggest that the model captures the underlying data patterns effectively as shown in $Plot: 11$ & $Plot:12$. In other words, the assumptions of the ARIMA Model are satisfied.The diagnostic checks on the residuals from the Auto ARIMA Model through which ARIMA(1,1,0)(1,0,0) was decided can also be seen in ($Section: 2$) of the Model part in the R code section which includes not only the residual analysis but also has the PACF, Ljung-Box Test and forecastings as well which also conclude that the assumptions are met.
+
+## Forecasting
+10 week forecasting was performed on the training set by ARIMA(0,1,1)(0,0,1) and from Auto ARIMA(1,1,0)(1,0,0) models, we computed the accuracy metrics such as ME, MAE, RMSE, MPE, and MAPE.It was concluded that the ARIMA(0,1,1)(0,0,1) had the best accuracy metrics overall as the Mean Error (ME) of 0.0380 suggests a slight average overestimation in forecasts, while the Root Mean Squared Error (RMSE) and Mean Absolute Error (MAE) values of $0.07711$ and $0.0692$, respectively, indicate moderate accuracy. The Mean Percentage Error (MPE) and Mean Absolute Percentage Error (MAPE) at $3.560$% and $7.226$% show that there's an average overestimation by about $3.56$%, and the errors are about $7.23$% of the actual values, suggesting reasonable accuracy in percentage terms.These accuracy metrics were better than the Auto ARIMA(1,1,0)(1,0,0). The forecasting plots , and its values can be seen in $Section:1$ ($Plot:13$) & $Section:2$ ($Plot:14$) of the Model part in the Rcode section. 
+
+## Weaknesses of the Model
+
+ARIMA model accuracy measures show various shortcomings. First, the positive Mean Error (ME) and Mean Percentage Error (MPE) reveal that the model may be overestimating avocado prices, suggesting that it may not be capturing data trends or cyclic patterns. Another problem is the residuals' autocorrelation (ACF1 value), which suggests the model is leaving some serial correlation unaccounted for, which could lead to inefficient or biassed projections.Although the model worked well, it needs fine-tuning to solve such issues.
+
+
+```{=tex}
+\begin{center}
+\bf \color{red}
+Recall the maximum length of the report: 3 pages, excluding the titlepage and the ``R code'' sections.
+\end{center}
+```
+```{=html}
+<!--
+#########################################################
+### DO NOT CHANGE the code until the section 'R code' ###
+#########################################################
+-->
+```
+```{=tex}
+\newpage
+\thispagestyle{empty}
+\begin{center}
+\Huge \bf [END of the REPORT]
+\end{center}
+```
+```{=tex}
+\resetpageaux
+\renewcommand{\thepageaux}{R-\arabic{pageaux}}
+```
+# R code
+
+```{=html}
+<!--
+#########################################################
+###              Start typing from here               ###
+#########################################################
+-->
+```
+```{=tex}
+\begin{center}
+\bf \color{red}
+Recall that this section has no page limits, but you are encouraged to be parsimonious (privilege quality over quantity).
+\end{center}
+```
+
+
+```{r, message=FALSE}
+# LOAD any other package you need...
+library(forecast)
+library(ggplot2)
+library(dplyr)
+library(xts)
+library(fma)
+library(tseries)
+```
+
+
+
+```{r, message=FALSE}
+## Importing the data
+setwd("/Users/haroonzia/Downloads")
+# Loading the data set
+avocado <- read.csv("avocado.csv")
+## Selecting West and Conventional Type (reasoning is explained in the report)
+avocado.W<-avocado[avocado$type=="conventional"&avocado$region=="West",]
+
+```
+
+```{r, message=FALSE}
+# Converting Date variable to Date format as it is necessary in R
+avocado.W$Date <- as.Date(avocado.W$Date)
+#Converting into a Timeseries
+avocado.ts <- ts(avocado.W$AveragePrice, start=c(2015, 0), end=c(2018, 10), frequency=52)
+
+
+# Filtering training dataset (observations until the end of 2017)
+training_data <- window(avocado.ts, end=c(2017, 52)) # Last index of 2017
+
+# Filtering test dataset (observations from January 2018 to March 2018)
+test_data <- window(avocado.ts, start=c(2018, 1), end=c(2018, 10))
+
+#Checking the splitted data sets
+tail(test_data)
+tail(training_data)
+```
+
+```{r}
+#Generating Summary Statistics for the Training Data
+summary(training_data)
+
+
+
+## EDA OF ENTIRE DATA SET TO CHOOSE THE REIGON
+
+# 'avocado' is our original dataframe with all the columns
+# First, we ensure the Date column in avocado is of type Date
+avocado$Date <- as.Date(avocado$Date)
+
+# Created the training data set again including: 
+# region and type for the entire Dataset and not only West
+training_data_full <- avocado %>% 
+  filter(Date <= as.Date("2017-12-31")) %>%
+  select(Date, AveragePrice, region, type, Total.Volume)
+
+# Summary statistics for each region and type with the .groups argument
+summary_stats <- training_data_full %>%
+  group_by(region, type) %>%
+  summarise(
+    AveragePrice_mean = mean(AveragePrice, na.rm = TRUE),
+    AveragePrice_median = median(AveragePrice, na.rm = TRUE),
+    AveragePrice_sd = sd(AveragePrice, na.rm = TRUE),
+    .groups = 'drop'  
+  )
+#Plot 1: Mean Average Prices by Region and Type
+# General plot of average prices
+
+ggplot(summary_stats, aes(x = region, y = AveragePrice_mean, fill = type)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_fill_manual(values = c("organic" = "skyblue", "conventional" = "brown")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Plot (1): Mean Average Prices by Region and Type", x = "Region", 
+       y = "Mean Average Price (USD)")
+
+# Calculating the standard deviation of prices and mean of total volume by region
+region_stats <- training_data_full %>%
+  group_by(region) %>%
+  summarize(
+    PriceVolatility = sd(AveragePrice, na.rm = TRUE),
+    AvgVolume = mean(Total.Volume, na.rm = TRUE),
+    .groups = 'drop'  # Ensures that the output is no longer grouped
+  ) %>%
+  arrange(desc(PriceVolatility), desc(AvgVolume))
+
+# Plotting to visualize the results
+# Plot 2: Plot for Price Volatility by Region
+ggplot(region_stats, aes(x = reorder(region, PriceVolatility), y = PriceVolatility)) +
+  geom_bar(stat = "identity", fill = "orange") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Plot (2): Price Volatility by Region", 
+       x = "Region", y = "Standard Deviation of Price")
+
+# Plot 3: Plot for Average Production Volume by Region
+ggplot(region_stats, aes(x = reorder(region, AvgVolume), y = AvgVolume)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Plot (3): Average Production Volume by Region", x = "Region", 
+       y = "Average Volume")
+
+
+## Plot 4: 
+# Boxplot of Average Price by Type
+ggplot(avocado.W, aes(x = type, y = AveragePrice, fill = type)) +
+  geom_boxplot() +
+  labs(title = " Plot (4): Boxplot of Average Price by Type in West",
+       x = "Type",
+       y = "Average Price (USD)",
+       fill = "Type")
+
+## AFTER RUNNING EDA ON THE ENTIRE TRAINING DATASET WE: #CHOOSE WEST DUE TO ITS SIGNIFICANT AVERAGE PRODUCTION VOLUME 
+
+## EDA ON TRAINING DATA 
+
+#PLOT: 5
+# Time series plot of Average Price
+autoplot(training_data) +
+  labs(title = "Plot (5): Time Series Plot of Average Price",
+       x = "Date",
+       y = "Average Price (USD)")
+
+
+# Plot 6: Histogram of Average Price
+ggplot(data.frame(training_data), aes(x = training_data)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(title = "Plot (6): Histogram of Average Price",
+       x = "Average Price (USD)",
+       y = "Frequency")
+
+
+
+
+
+# Plot: 7 qqplot
+{qqnorm(avocado.ts)
+qqline(avocado.ts,distribution=qnorm)}
+```
+
+```{r}
+#SINCE OUR DATA SET HAS MISSING VALUES WE DO LINEAR INTERPOLATION
+
+#Checking for the number of missing values
+sum(is.na(training_data))
+sum(is.na(test_data))
+#Linear Interpolation by na.approx()
+interpolated_training <- na.approx(training_data)
+interpolated_test <- na.approx(test_data)
+# Checking for any Remaining Missing values
+sum(is.na(interpolated_test))
+sum(is.na(interpolated_training))
+
+#SINCE WE HAVE NOW INTERPOLATED WE WILL SEE OUR ACF, PACF: #PLOTS AND ALSO CHECK FOR STATIONARITY AND SEASONALITY.
+
+#ACF AND PACF :
+#Plot: 8 and 9 
+Acf(interpolated_training)
+Pacf(interpolated_training)
+
+#ADF  TEST TO CHECK FOR STATIONARITY.
+adf.test(interpolated_training)
+
+
+#Plot 10:SEASONAL DECOMPOSITION PLOT: 
+plot(decompose(interpolated_training))
+```
+
+
+```{r}
+#Since Seasonality was present as evident by our SD plot we adjusted it.
+SS<-seasadj(decompose(interpolated_training))
+```
+
+
+
+```{r}
+#Section 1: ARIMA MODELS AND D VALUES =1 for differencing
+arima1<-arima(SS,order=c(1,1,1))
+arima2<-arima(SS,order=c(0,1,1))
+arima3<-arima(SS,order=c(1,1,0), seasonal = c(1,0,0))
+arima4<-arima(SS,order=c(0,1,1), seasonal = c(0,0,1))
+arima5<-arima(SS,order=c(1,0,0))
+arima6<-arima(SS,order =c(0,1,3))
+AIC.ar1<-AIC(arima1)
+AIC.ar2<-AIC(arima2)
+AIC.ar3<-AIC(arima3)
+AIC.ar4<-AIC(arima4)
+AIC.ar5<-AIC(arima5)
+AIC.ar6<-AIC(arima6)
+AIC.ar1;AIC.ar2;AIC.ar3;AIC.ar4;AIC.ar5;AIC.ar6
+#SINCE ARIMA4 had the lowest AIC value we choose that.
+
+### checking residuals
+#PLOT: 11
+checkresiduals(arima4)
+#PLOT: 12
+pacf(arima4$residuals)
+
+# forecast the testing set to find the performance metrics
+forcast_arima4 <-forecast(arima4,h=10)
+
+forcast_arima4
+
+#PLOT: 13
+plot(forcast_arima4, main="Plot(13): Forecast ARIMA(0,1,1)(0,0,1)", xlab="Time", ylab="Average Price")
+lines(interpolated_test, col= 'red')
+accuracy(forcast_arima4$mean,interpolated_test)
+```
+
+
+```{r}
+# Section 2: AUTO ARIMA Model 
+AUTO <- auto.arima(SS,d=1) #d is first difference 
+AUTO
+checkresiduals(AUTO)
+pacf(AUTO$residuals)
+
+forcast_ar1 <-forecast(AUTO,h=10)
+forcast_ar1
+
+#PLOT: 14
+plot(forcast_ar1, main="PLot(14): Forecast ARIMA(1,1,0)(1,0,0)", xlab="Time", ylab="Average Price")
+lines(interpolated_test, col= 'red')
+accuracy(forcast_ar1$mean,interpolated_test)
+```
